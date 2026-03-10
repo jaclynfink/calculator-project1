@@ -3,7 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from app.calculator import Calculator, LoggingObserver, AutoSaveObserver
 from app.history import History
-from app.exceptions import InvalidOperationError
+from app.exceptions import InvalidOperationError, ValidationError, OperationError
 
 
 @pytest.mark.parametrize(
@@ -106,7 +106,7 @@ def test_logging_observer_logs_calculation(tmp_path):
     assert log_file.exists()
     log_content = log_file.read_text()
     assert "Calculation:" in log_content
-    assert "5 + 3 = 8" in log_content
+    assert "5.0 + 3.0 = 8.0" in log_content
 
 
 def test_autosave_observer_saves_history(tmp_path):
@@ -120,8 +120,8 @@ def test_autosave_observer_saves_history(tmp_path):
     
     assert csv_file.exists()
     csv_content = csv_file.read_text()
-    assert "5 + 3" in csv_content
-    assert "8" in csv_content
+    assert "5.0 + 3.0" in csv_content
+    assert "8.0" in csv_content
 
 
 def test_multiple_observers():
@@ -143,7 +143,7 @@ def test_calculator_expression_format():
     
     last = calc.history.last(1)
     assert len(last) == 1
-    assert "5 + 3" in str(last.iloc[0])
+    assert "5.0 + 3.0" in str(last.iloc[0])
 
 
 @pytest.mark.parametrize(
@@ -166,10 +166,48 @@ def test_calculator_root_edge_cases():
     """Test root operation edge cases."""
     calc = Calculator()
     
-    # Zeroth root should raise error
+    # Zeroth root should raise ZeroDivisionError
     with pytest.raises(ZeroDivisionError):
         calc.calculate(9, "root", 0)
     
-    # Even root of negative should raise error
-    with pytest.raises(ValueError):
+    # Even root of negative should raise OperationError
+    with pytest.raises(OperationError):
         calc.calculate(-9, "root", 2)
+
+
+def test_calculator_invalid_input_string():
+    """Test that non-numeric strings are rejected."""
+    calc = Calculator()
+    with pytest.raises(ValidationError, match="not a valid number"):
+        calc.calculate("abc", "+", 3)
+
+
+def test_calculator_invalid_second_operand():
+    """Test that invalid second operand is rejected."""
+    calc = Calculator()
+    with pytest.raises(ValidationError, match="second operand"):
+        calc.calculate(5, "+", "xyz")
+
+
+def test_calculator_empty_operation():
+    """Test that empty operation token is rejected."""
+    calc = Calculator()
+    with pytest.raises(ValidationError, match="cannot be empty"):
+        calc.calculate(5, "", 3)
+
+
+def test_calculator_validates_max_input(monkeypatch, tmp_path):
+    """Test that inputs exceeding max value are rejected."""
+    monkeypatch.setenv("CALCULATOR_LOG_DIR", str(tmp_path / "logs"))
+    monkeypatch.setenv("CALCULATOR_HISTORY_DIR", str(tmp_path / "history"))
+    monkeypatch.setenv("CALCULATOR_MAX_INPUT_VALUE", "100")
+    
+    calc = Calculator()
+    
+    # Should work with values within range
+    calc.calculate(50, "+", 50)
+    
+    # Should reject values exceeding max
+    with pytest.raises(ValidationError, match="exceeds maximum"):
+        calc.calculate(101, "+", 5)
+

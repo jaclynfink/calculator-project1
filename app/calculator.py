@@ -4,6 +4,8 @@ from datetime import datetime
 
 from .history import History
 from .operations import OperationFactory
+from .input_validators import InputValidator
+from .exceptions import ValidationError, InvalidOperationError, OperationError
 
 
 class Observer(ABC):
@@ -51,8 +53,9 @@ class AutoSaveObserver(Observer):
 
 
 class Calculator:
-    def __init__(self, history=None):
+    def __init__(self, history=None, validator=None):
         self.history = history or History.empty()
+        self.validator = validator or InputValidator()
         self._observers = []
     
     def attach(self, observer):
@@ -72,7 +75,7 @@ class Calculator:
     
     def calculate(self, a, operation_token, b):
         """
-        Perform a calculation.
+        Perform a calculation with input validation.
         
         Args:
             a: First operand
@@ -81,21 +84,45 @@ class Calculator:
             
         Returns:
             The calculation result
+            
+        Raises:
+            ValidationError: If inputs are invalid
+            InvalidOperationError: If operation token is invalid
+            OperationError: If operation cannot be performed (e.g., division by zero)
         """
-        # Get the operation from factory
-        operation = OperationFactory.create(operation_token)
-        
-        # Execute the operation
-        result = operation.execute(a, b)
-        
-        # Create timestamp and expression
-        timestamp = datetime.now()
-        expression = f"{a} {operation.symbol} {b}"
-        
-        # Add to history
-        self.history.add(timestamp, expression, result)
-        
-        # Notify observers
-        self._notify_observers(timestamp, expression, result)
+        try:
+            # Validate operation token
+            operation_token = self.validator.validate_operation_token(operation_token)
+            
+            # Validate operands
+            a, b = self.validator.validate_operands(a, b)
+            
+            # Get the operation from factory
+            operation = OperationFactory.create(operation_token)
+            
+            # Execute the operation
+            result = operation.execute(a, b)
+            
+            # Round result to configured precision
+            result = self.validator.round_result(result)
+            
+            # Create timestamp and expression
+            timestamp = datetime.now()
+            expression = f"{a} {operation.symbol} {b}"
+            
+            # Add to history
+            self.history.add(timestamp, expression, result)
+            
+            # Notify observers
+            self._notify_observers(timestamp, expression, result)
+            
+            return result
+            
+        except ZeroDivisionError:
+            # Re-raise ZeroDivisionError as-is for specific handling
+            raise
+        except (ValueError, ArithmeticError) as e:
+            # Convert other arithmetic errors to OperationError
+            raise OperationError(f"Operation failed: {str(e)}") from e
         
         return result

@@ -1,6 +1,6 @@
 from pathlib import Path
 import pandas as pd
-from .exceptions import HistoryError
+from .exceptions import HistoryError, DataError
 
 
 class History:
@@ -85,45 +85,100 @@ class History:
         
         return self.df.tail(n).copy()
     
-    def save_csv(self, path):
+    def save_csv(self, path, encoding='utf-8'):
         """
-        Save history to a CSV file
+        Save history to a CSV file with robust error handling.
         
         Args:
             path: File path to save the CSV
-
+            encoding: File encoding (default: utf-8)
+            
+        Raises:
+            DataError: If saving fails
         """
         try:
-            Path(path).parent.mkdir(parents=True, exist_ok=True)
+            # Create parent directory if it doesn't exist
+            file_path = Path(path)
+            file_path.parent.mkdir(parents=True, exist_ok=True)
             
-            self.df.to_csv(path, index=False)
+            # Save to CSV
+            self.df.to_csv(path, index=False, encoding=encoding)
+            
+        except PermissionError as e:
+            raise DataError(
+                f"Permission denied: Cannot write to '{path}'. "
+                f"Please check file permissions."
+            ) from e
+        except OSError as e:
+            raise DataError(
+                f"File system error: Cannot save history to '{path}'. "
+                f"Error: {str(e)}"
+            ) from e
         except Exception as e:
-            raise HistoryError(f"ERROR: Failed to save history: {e}") from e
+            raise DataError(
+                f"Unexpected error while saving history to '{path}': {str(e)}"
+            ) from e
     
     @classmethod
-    def load_csv(cls, path):
+    def load_csv(cls, path, encoding='utf-8'):
         """
-        Load history from a CSV file.
+        Load history from a CSV file with robust error handling.
         
         Args:
             path: File path to load from
+            encoding: File encoding (default: utf-8)
             
         Returns:
             A History object with loaded data
+            
+        Raises:
+            DataError: If loading fails
         """
-        # Check if file exists
         file_path = Path(path)
+        
+        # Check if file exists
         if not file_path.exists():
             return cls.empty()
         
         try:
-            df = pd.read_csv(path)
+            # Read CSV file
+            df = pd.read_csv(path, encoding=encoding)
+            
+        except pd.errors.EmptyDataError:
+            raise DataError(
+                f"Empty data: The file '{path}' is empty or contains no data."
+            )
+        except pd.errors.ParserError as e:
+            raise DataError(
+                f"Parse error: Cannot read '{path}' as CSV. "
+                f"The file may be corrupted or have invalid formatting. Error: {str(e)}"
+            )
+        except UnicodeDecodeError as e:
+            raise DataError(
+                f"Encoding error: Cannot read '{path}' with {encoding} encoding. "
+                f"Try a different encoding or check if the file is corrupted."
+            )
+        except FileNotFoundError:
+            raise DataError(
+                f"File not found: '{path}' does not exist."
+            )
+        except PermissionError:
+            raise DataError(
+                f"Permission denied: Cannot read from '{path}'. "
+                f"Please check file permissions."
+            )
         except Exception as e:
-            raise HistoryError(f"ERROR: Failed to load history: {e}") from e
+            raise DataError(
+                f"Unexpected error while loading history from '{path}': {str(e)}"
+            )
         
-        # Check that the file has the right columns
+        # Validate columns
         required_columns = {"timestamp", "expression", "result"}
         if not required_columns.issubset(set(df.columns)):
-            raise HistoryError("ERROR: History CSV missing required columns")
+            missing = required_columns - set(df.columns)
+            raise DataError(
+                f"Invalid CSV format: The file '{path}' is missing required columns: {missing}. "
+                f"Expected columns: timestamp, expression, result."
+            )
         
         return cls(dataframe=df[list(required_columns)].copy())

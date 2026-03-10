@@ -2,14 +2,32 @@ class InvalidOperationError(Exception):
     """Raised when user provides an invalid operation token."""
     pass
 
+
 class UndoRedoError(Exception):
     """Raised when undo or redo operation cannot be performed."""
     pass
+
 
 class HistoryError(Exception):
     """Raised when there is an error with history operations."""
     pass
 
+
 class ConfigError(Exception):
     """Raised when there is an error with configuration."""
+    pass
+
+
+class OperationError(Exception):
+    """Raised when an operation cannot be performed (e.g., division by zero, invalid root)."""
+    pass
+
+
+class ValidationError(Exception):
+    """Raised when input validation fails."""
+    pass
+
+
+class DataError(Exception):
+    """Raised when there are errors reading or writing data files (CSV, etc.)."""
     pass
