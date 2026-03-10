@@ -6,6 +6,7 @@ from .history import History
 from .operations import OperationFactory
 from .input_validators import InputValidator
 from .exceptions import ValidationError, InvalidOperationError, OperationError
+from .logger import get_logger
 
 
 class Observer(ABC):
@@ -21,11 +22,11 @@ class LoggingObserver(Observer):
     
     def __init__(self, log_file="calculator.log"):
         self.log_file = log_file
-        # Use unique logger name based on file path to avoid conflicts
+        # Use unique logger name based on file path
         logger_name = f"CalculatorLog_{id(self)}"
         self.logger = logging.getLogger(logger_name)
         self.logger.setLevel(logging.INFO)
-        # Prevent propagation to avoid pytest capture conflicts
+        # Stop propagation to avoid pytest conflicts
         self.logger.propagate = False
         
         self.handler = logging.FileHandler(log_file)
@@ -57,16 +58,20 @@ class Calculator:
         self.history = history or History.empty()
         self.validator = validator or InputValidator()
         self._observers = []
+        self.logger = get_logger()
+        self.logger.info("Calculator initialized")
     
     def attach(self, observer):
         """Register an observer."""
         if observer not in self._observers:
             self._observers.append(observer)
+            self.logger.log_observer_attached(observer.__class__.__name__)
     
     def detach(self, observer):
         """Unregister an observer."""
         if observer in self._observers:
             self._observers.remove(observer)
+            self.logger.log_observer_detached(observer.__class__.__name__)
     
     def _notify_observers(self, timestamp, expression, result):
         """Notify all observers of a new calculation."""
@@ -91,6 +96,9 @@ class Calculator:
             OperationError: If operation cannot be performed (e.g., division by zero)
         """
         try:
+            # Log input received
+            self.logger.log_input_received(a, operation_token, b)
+            
             # Validate operation token
             operation_token = self.validator.validate_operation_token(operation_token)
             
@@ -99,6 +107,7 @@ class Calculator:
             
             # Get the operation from factory
             operation = OperationFactory.create(operation_token)
+            self.logger.log_operation_created(operation_token)
             
             # Execute the operation
             result = operation.execute(a, b)
@@ -113,16 +122,33 @@ class Calculator:
             # Add to history
             self.history.add(timestamp, expression, result)
             
+            # Log successful calculation
+            self.logger.log_calculation(a, operation.symbol, b, result)
+            
             # Notify observers
             self._notify_observers(timestamp, expression, result)
             
             return result
             
-        except ZeroDivisionError:
-            # Re-raise ZeroDivisionError as-is for specific handling
+        except ZeroDivisionError as e:
+            # Log and re-raise ZeroDivisionError as-is for specific handling
+            self.logger.log_division_by_zero(a, operation_token, b)
+            raise
+        except InvalidOperationError as e:
+            # Log invalid operation error
+            self.logger.log_invalid_operation(operation_token)
+            raise
+        except ValidationError as e:
+            # Log validation error
+            self.logger.log_validation_error(f"{a}, {b}", str(e))
             raise
         except (ValueError, ArithmeticError) as e:
             # Convert other arithmetic errors to OperationError
+            self.logger.log_operation_error(operation_token, str(e))
             raise OperationError(f"Operation failed: {str(e)}") from e
+        except Exception as e:
+            # Log any unexpected exceptions
+            self.logger.log_exception(e, context="calculate method")
+            raise
         
         return result

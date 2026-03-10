@@ -1,6 +1,7 @@
 from pathlib import Path
 import pandas as pd
 from .exceptions import HistoryError, DataError
+from .logger import get_logger
 
 
 class History:
@@ -20,6 +21,7 @@ class History:
         Args:
             dataframe: A pandas DataFrame with history
         """
+        self.logger = get_logger()
         if dataframe is None:
             #Create new DataFrame
             self.df = pd.DataFrame(columns=["timestamp", "expression", "result"])
@@ -104,17 +106,23 @@ class History:
             # Save to CSV
             self.df.to_csv(path, index=False, encoding=encoding)
             
+            # Log successful save
+            self.logger.log_history_saved(path)
+            
         except PermissionError as e:
+            self.logger.log_file_error(path, "Permission denied")
             raise DataError(
                 f"Permission denied: Cannot write to '{path}'. "
                 f"Please check file permissions."
             ) from e
         except OSError as e:
+            self.logger.log_file_error(path, f"File system error: {str(e)}")
             raise DataError(
                 f"File system error: Cannot save history to '{path}'. "
                 f"Error: {str(e)}"
             ) from e
         except Exception as e:
+            self.logger.log_exception(e, context=f"saving history to {path}")
             raise DataError(
                 f"Unexpected error while saving history to '{path}': {str(e)}"
             ) from e
@@ -134,10 +142,12 @@ class History:
         Raises:
             DataError: If loading fails
         """
+        logger = get_logger()
         file_path = Path(path)
         
         # Check if file exists
         if not file_path.exists():
+            logger.log_file_not_found(path)
             return cls.empty()
         
         try:
@@ -168,6 +178,7 @@ class History:
                 f"Please check file permissions."
             )
         except Exception as e:
+            logger.log_exception(e, context=f"loading history from {path}")
             raise DataError(
                 f"Unexpected error while loading history from '{path}': {str(e)}"
             )
@@ -176,9 +187,13 @@ class History:
         required_columns = {"timestamp", "expression", "result"}
         if not required_columns.issubset(set(df.columns)):
             missing = required_columns - set(df.columns)
+            logger.log_data_error("load_csv", f"Missing columns: {missing}")
             raise DataError(
                 f"Invalid CSV format: The file '{path}' is missing required columns: {missing}. "
                 f"Expected columns: timestamp, expression, result."
             )
+        
+        # Log successful load
+        logger.log_history_loaded(path, len(df))
         
         return cls(dataframe=df[list(required_columns)].copy())
