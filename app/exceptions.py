@@ -9,3 +9,7 @@ class UndoRedoError(Exception):
 class HistoryError(Exception):
     """Raised when there is an error with history operations."""
     pass
+
+class ConfigError(Exception):
+    """Raised when there is an error with configuration."""
+    pass
