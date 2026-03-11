@@ -120,7 +120,7 @@ class Calculator:
             expression = f"{a} {operation.symbol} {b}"
             
             # Add to history
-            self.history.add(timestamp, expression, result)
+            self.history.add(timestamp, operation.symbol, a, b, result)
             
             # Log successful calculation
             self.logger.log_calculation(a, operation.symbol, b, result)

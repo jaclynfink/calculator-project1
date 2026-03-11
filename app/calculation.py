@@ -199,7 +199,7 @@ class CalculatorREPL:
         
         recent = self.calculator.history.last(n)
         for idx, row in recent.iterrows():
-            lines.append(f"{row['timestamp']} | {row['expression']} = {row['result']}")
+            lines.append(f"{row['timestamp']} | {row['operand1']} {row['operation']} {row['operand2']} = {row['result']}")
         
         return "\n".join(lines)
     
@@ -246,7 +246,7 @@ EXAMPLES:
   history              → Show recent calculations
 """
     
-    def run(self):
+    def run(self): # pragma: no cover
         """Run the REPL loop."""
         print("=" * 60)
         print("  Welcome to the Advanced Calculator!")

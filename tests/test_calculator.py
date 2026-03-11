@@ -64,7 +64,7 @@ def test_calculator_division_by_zero():
 def test_calculator_with_existing_history():
     """Test calculator can use existing history."""
     history = History.empty()
-    history.add(datetime.now(), "1 + 1", 2)
+    history.add(datetime.now(), "+", 1, 1, 2)
     
     calc = Calculator(history=history)
     calc.calculate(5, "+", 3)
@@ -120,7 +120,9 @@ def test_autosave_observer_saves_history(tmp_path):
     
     assert csv_file.exists()
     csv_content = csv_file.read_text()
-    assert "5.0 + 3.0" in csv_content
+    assert "+" in csv_content
+    assert "5.0" in csv_content
+    assert "3.0" in csv_content
     assert "8.0" in csv_content
 
 
@@ -143,7 +145,10 @@ def test_calculator_expression_format():
     
     last = calc.history.last(1)
     assert len(last) == 1
-    assert "5.0 + 3.0" in str(last.iloc[0])
+    assert last.iloc[0]["operation"] == "+"
+    assert last.iloc[0]["operand1"] == 5.0
+    assert last.iloc[0]["operand2"] == 3.0
+    assert last.iloc[0]["result"] == 8.0
 
 
 @pytest.mark.parametrize(

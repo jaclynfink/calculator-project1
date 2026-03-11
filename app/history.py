@@ -1,7 +1,39 @@
 from pathlib import Path
 import pandas as pd
+from datetime import datetime
 from .exceptions import HistoryError, DataError
 from .logger import get_logger
+
+
+class Calculation:
+    """
+    Represents a single calculation with operation, operands, and result.
+    """
+    
+    def __init__(self, timestamp, operation, operand1, operand2, result):
+        """
+        Create a Calculation instance.
+        
+        Args:
+            timestamp: When the calculation was performed
+            operation: Operation symbol (e.g., '+', '-', '*')
+            operand1: First operand
+            operand2: Second operand
+            result: Calculation result
+        """
+        self.timestamp = timestamp if isinstance(timestamp, datetime) else datetime.fromisoformat(str(timestamp))
+        self.operation = operation
+        self.operand1 = float(operand1)
+        self.operand2 = float(operand2)
+        self.result = float(result)
+    
+    def __str__(self):
+        """Return string representation of calculation."""
+        return f"{self.operand1} {self.operation} {self.operand2} = {self.result}"
+    
+    def __repr__(self):
+        """Return detailed representation."""
+        return f"Calculation(timestamp={self.timestamp}, operation='{self.operation}', operand1={self.operand1}, operand2={self.operand2}, result={self.result})"
 
 
 class History:
@@ -10,7 +42,9 @@ class History:
     
     Each row contains:
     - timestamp: when the calculation was done
-    - expression: what was calculated (like "5 + 3")
+    - operation: the operation symbol (e.g., '+', '-', '*')
+    - operand1: first operand
+    - operand2: second operand
     - result: the answer
     """
     
@@ -24,7 +58,7 @@ class History:
         self.logger = get_logger()
         if dataframe is None:
             #Create new DataFrame
-            self.df = pd.DataFrame(columns=["timestamp", "expression", "result"])
+            self.df = pd.DataFrame(columns=["timestamp", "operation", "operand1", "operand2", "result"])
         else:
             self.df = dataframe
     
@@ -38,19 +72,23 @@ class History:
         """
         return cls(dataframe=None)
     
-    def add(self, timestamp, expression, result):
+    def add(self, timestamp, operation, operand1, operand2, result):
         """
         Add a new calculation to the history.
         
         Args:
             timestamp: When the calculation was done
-            expression: The calculation string
+            operation: Operation symbol (e.g., '+', '-', '*')
+            operand1: First operand
+            operand2: Second operand
             result: The answer
         """
         # Create a dictionary
         new_row = {
             "timestamp": timestamp,
-            "expression": expression,
+            "operation": operation,
+            "operand1": operand1,
+            "operand2": operand2,
             "result": result
         }
         
@@ -189,16 +227,63 @@ class History:
             )
         
         # Validate columns
-        required_columns = {"timestamp", "expression", "result"}
+        required_columns = {"timestamp", "operation", "operand1", "operand2", "result"}
         if not required_columns.issubset(set(df.columns)):
             missing = required_columns - set(df.columns)
             logger.log_data_error("load_csv", f"Missing columns: {missing}")
             raise DataError(
                 f"Invalid CSV format: The file '{path}' is missing required columns: {missing}. "
-                f"Expected columns: timestamp, expression, result."
+                f"Expected columns: timestamp, operation, operand1, operand2, result."
             )
         
         # Log successful load
         logger.log_history_loaded(path, len(df))
         
         return cls(dataframe=df[list(required_columns)].copy())
+    
+    def to_calculations(self):
+        """
+        Convert history DataFrame to a list of Calculation instances.
+        
+        Returns:
+            List of Calculation objects, one for each history entry
+        """
+        calculations = []
+        for _, row in self.df.iterrows():
+            calc = Calculation(
+                timestamp=row['timestamp'],
+                operation=row['operation'],
+                operand1=row['operand1'],
+                operand2=row['operand2'],
+                result=row['result']
+            )
+            calculations.append(calc)
+        return calculations
+    
+    @classmethod
+    def from_calculations(cls, calculations):
+        """
+        Create a History object from a list of Calculation instances.
+        
+        Args:
+            calculations: List of Calculation objects
+            
+        Returns:
+            A History object containing the calculations
+        """
+        if not calculations:
+            return cls.empty()
+        
+        data = [
+            {
+                "timestamp": calc.timestamp,
+                "operation": calc.operation,
+                "operand1": calc.operand1,
+                "operand2": calc.operand2,
+                "result": calc.result
+            }
+            for calc in calculations
+        ]
+        
+        df = pd.DataFrame(data)
+        return cls(dataframe=df)
