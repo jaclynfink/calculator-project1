@@ -3,9 +3,16 @@ Tests for the Calculator REPL.
 """
 
 import pytest
+import re
 from app.calculation import CalculatorREPL
 from app.calculator import Calculator
 from app.history import History
+
+
+def strip_ansi_codes(text):
+    """Remove ANSI color codes from text for testing."""
+    ansi_escape = re.compile(r'\x1b\[[0-9;]*m')
+    return ansi_escape.sub('', text)
 
 
 class TestCalculatorREPL:
@@ -100,67 +107,67 @@ class TestCalculatorREPL:
         """Test calculation command - addition."""
         repl = CalculatorREPL()
         result = repl._process_command("calculate", ['+', '5', '3'])
-        assert "Result: 8" in result
+        assert "Result: 8" in strip_ansi_codes(result)
     
     def test_process_command_calculate_subtract(self):
         """Test calculation command - subtraction."""
         repl = CalculatorREPL()
         result = repl._process_command("calculate", ['-', '10', '2'])
-        assert "Result: 8" in result
+        assert "Result: 8" in strip_ansi_codes(result)
     
     def test_process_command_calculate_multiply(self):
         """Test calculation command - multiplication."""
         repl = CalculatorREPL()
         result = repl._process_command("calculate", ['*', '4', '2'])
-        assert "Result: 8" in result
+        assert "Result: 8" in strip_ansi_codes(result)
     
     def test_process_command_calculate_divide(self):
         """Test calculation command - division."""
         repl = CalculatorREPL()
         result = repl._process_command("calculate", ['/', '16', '2'])
-        assert "Result: 8" in result
+        assert "Result: 8" in strip_ansi_codes(result)
     
     def test_process_command_calculate_power(self):
         """Test calculation command - power."""
         repl = CalculatorREPL()
         result = repl._process_command("calculate", ['pow', '2', '3'])
-        assert "Result: 8" in result
+        assert "Result: 8" in strip_ansi_codes(result)
     
     def test_process_command_calculate_root(self):
         """Test calculation command - root."""
         repl = CalculatorREPL()
         result = repl._process_command("calculate", ['root', '27', '3'])
-        assert "Result: 3" in result
+        assert "Result: 3" in strip_ansi_codes(result)
     
     def test_process_command_calculate_modulus(self):
         """Test calculation command - modulus."""
         repl = CalculatorREPL()
         result = repl._process_command("calculate", ['mod', '10', '3'])
-        assert "Result: 1" in result
+        assert "Result: 1" in strip_ansi_codes(result)
     
     def test_process_command_calculate_int_divide(self):
         """Test calculation command - integer division."""
         repl = CalculatorREPL()
         result = repl._process_command("calculate", ['//', '17', '5'])
-        assert "Result: 3" in result
+        assert "Result: 3" in strip_ansi_codes(result)
     
     def test_process_command_calculate_percent(self):
         """Test calculation command - percentage."""
         repl = CalculatorREPL()
         result = repl._process_command("calculate", ['percent', '20', '50'])
-        assert "Result: 40" in result 
+        assert "Result: 40" in strip_ansi_codes(result) 
     
     def test_process_command_calculate_abs_diff(self):
         """Test calculation command - absolute difference."""
         repl = CalculatorREPL()
         result = repl._process_command("calculate", ['abs_diff', '5', '12'])
-        assert "Result: 7" in result
+        assert "Result: 7" in strip_ansi_codes(result)
     
     def test_process_command_history_empty(self):
         """Test history command with empty history."""
         repl = CalculatorREPL()
         result = repl._process_command("history", [])
-        assert "No calculation history" in result
+        assert "No calculation history" in strip_ansi_codes(result)
     
     def test_process_command_history_with_data(self):
         """Test history command with calculations."""
@@ -169,9 +176,10 @@ class TestCalculatorREPL:
         repl._process_command("calculate", ['-', '10', '2'])
         
         result = repl._process_command("history", [])
-        assert "Calculation History" in result
-        assert "5.0 + 3.0 = 8" in result
-        assert "10.0 - 2.0 = 8" in result
+        result_clean = strip_ansi_codes(result)
+        assert "Calculation History" in result_clean
+        assert "5.0 + 3.0 = 8" in result_clean
+        assert "10.0 - 2.0 = 8" in result_clean
     
     def test_process_command_clear(self):
         """Test clear command."""
@@ -180,7 +188,7 @@ class TestCalculatorREPL:
         assert not repl.calculator.history.is_empty()
         
         result = repl._process_command("clear", [])
-        assert "History cleared" in result
+        assert "History cleared" in strip_ansi_codes(result)
         assert repl.calculator.history.is_empty()
     
     def test_process_command_undo(self):
@@ -344,7 +352,8 @@ class TestCalculatorREPL:
         # Force an exception by passing invalid data
         result = repl._process_command("calculate", ['+', '5', '3', 'extra'])
         # Should still return a result without crashing
-        assert "Result:" in result or "Error" in result
+        result_clean = strip_ansi_codes(result)
+        assert "Result:" in result_clean or "Error" in result_clean
     
     def test_show_history_formatting(self):
         """Test history display formatting."""
@@ -352,8 +361,9 @@ class TestCalculatorREPL:
         repl._process_command("calculate", ['+', '5', '3'])
         
         history_output = repl._show_history(n=10)
-        assert "Calculation History" in history_output
-        assert "5.0 + 3.0 = 8" in history_output
+        history_clean = strip_ansi_codes(history_output)
+        assert "Calculation History" in history_clean
+        assert "5.0 + 3.0 = 8" in history_clean
     
     def test_save_default_path(self, tmp_path):
         """Test save with explicit path."""

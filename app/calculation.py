@@ -3,6 +3,10 @@ from .calculator_memento import HistoryMemento, HistoryCaretaker
 from .history import History
 from .exceptions import ValidationError, InvalidOperationError, OperationError, UndoRedoError
 from .logger import get_logger
+from colorama import Fore, Style, init
+
+# Initialize colorama for cross-platform color support
+init(autoreset=True)
 
 
 class CalculatorREPL:
@@ -113,25 +117,25 @@ class CalculatorREPL:
                 self.calculator.history.clear()
                 self._save_state()
                 self.logger.info("History cleared")
-                return "History cleared."
+                return f"{Fore.GREEN}History cleared.{Style.RESET_ALL}"
             
             elif command == 'undo':
                 try:
                     memento = self._caretaker.undo()
                     self.calculator.history.df = memento.df.copy(deep=True)
                     self.logger.info("Undo performed")
-                    return "Undo successful."
+                    return f"{Fore.GREEN}Undo successful.{Style.RESET_ALL}"
                 except UndoRedoError as e:
-                    return f"Cannot undo: {e}"
+                    return f"{Fore.YELLOW}Cannot undo: {e}{Style.RESET_ALL}"
             
             elif command == 'redo':
                 try:
                     memento = self._caretaker.redo()
                     self.calculator.history.df = memento.df.copy(deep=True)
                     self.logger.info("Redo performed")
-                    return "Redo successful."
+                    return f"{Fore.GREEN}Redo successful.{Style.RESET_ALL}"
                 except UndoRedoError as e:
-                    return f"Cannot redo: {e}"
+                    return f"{Fore.YELLOW}Cannot redo: {e}{Style.RESET_ALL}"
             
             elif command == 'save':
                 path = args[0] if args else None
@@ -160,26 +164,26 @@ class CalculatorREPL:
                     # Save state for undo
                     self._save_state()
                     
-                    return f"Result: {result}"
+                    return f"{Fore.GREEN}Result: {Fore.CYAN}{result}{Style.RESET_ALL}"
                 
                 except ZeroDivisionError:
-                    return "Error: Division by zero is not allowed."
+                    return f"{Fore.RED}Error: Division by zero is not allowed.{Style.RESET_ALL}"
                 except ValidationError as e:
-                    return f"Validation Error: {e}"
+                    return f"{Fore.RED}Validation Error: {e}{Style.RESET_ALL}"
                 except InvalidOperationError as e:
-                    return f"Invalid Operation: {e}"
+                    return f"{Fore.RED}Invalid Operation: {e}{Style.RESET_ALL}"
                 except OperationError as e:
-                    return f"Operation Error: {e}"
+                    return f"{Fore.RED}Operation Error: {e}{Style.RESET_ALL}"
             
             elif command == 'error':
-                return f"Error: {args[0]}"
+                return f"{Fore.RED}Error: {args[0]}{Style.RESET_ALL}"
             
             else:
-                return f"Unknown command: {command}. Type 'help' for available commands."
+                return f"{Fore.RED}Unknown command: {command}. Type 'help' for available commands.{Style.RESET_ALL}"
         
         except Exception as e:
             self.logger.log_exception(e, context=f"processing command '{command}'")
-            return f"An error occurred: {e}"
+            return f"{Fore.RED}An error occurred: {e}{Style.RESET_ALL}"
     
     def _show_history(self, n=10):
         """
@@ -192,14 +196,14 @@ class CalculatorREPL:
             Formatted history string
         """
         if self.calculator.history.is_empty():
-            return "No calculation history available."
+            return f"{Fore.YELLOW}No calculation history available.{Style.RESET_ALL}"
         
-        lines = ["Calculation History (last {} entries):".format(n)]
-        lines.append("-" * 50)
+        lines = [f"{Fore.CYAN}Calculation History (last {n} entries):{Style.RESET_ALL}"]
+        lines.append(f"{Fore.CYAN}{'-' * 50}{Style.RESET_ALL}")
         
         recent = self.calculator.history.last(n)
         for idx, row in recent.iterrows():
-            lines.append(f"{row['timestamp']} | {row['operand1']} {row['operation']} {row['operand2']} = {row['result']}")
+            lines.append(f"{Fore.WHITE}{row['timestamp']} | {row['operand1']} {row['operation']} {row['operand2']} = {Fore.GREEN}{row['result']}{Style.RESET_ALL}")
         
         return "\n".join(lines)
     
@@ -248,17 +252,17 @@ EXAMPLES:
     
     def run(self): # pragma: no cover
         """Run the REPL loop."""
-        print("=" * 60)
-        print("  Welcome to the Advanced Calculator!")
-        print("=" * 60)
-        print("Type 'help' for available commands, 'exit' to quit.")
+        print(f"{Fore.CYAN}{'=' * 60}{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}  Welcome to the Advanced Calculator!{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}{'=' * 60}{Style.RESET_ALL}")
+        print(f"{Fore.WHITE}Type {Fore.GREEN}'help'{Fore.WHITE} for available commands, {Fore.RED}'exit'{Fore.WHITE} to quit.{Style.RESET_ALL}")
         print()
         
         self.logger.info("REPL started")
         
         while True:
             try:
-                user_input = input("calc> ").strip()
+                user_input = input(f"{Fore.MAGENTA}calc> {Style.RESET_ALL}").strip()
                 
                 if not user_input:
                     continue
@@ -271,7 +275,7 @@ EXAMPLES:
                 
                 # Check for exit
                 if output == 'exit':
-                    print("Goodbye!")
+                    print(f"{Fore.YELLOW}Goodbye!{Style.RESET_ALL}")
                     self.logger.info("REPL exited")
                     break
                 
@@ -281,15 +285,15 @@ EXAMPLES:
                     print()
             
             except KeyboardInterrupt:
-                print("\nUse 'exit' or 'quit' to exit the calculator.")
+                print(f"\n{Fore.YELLOW}Use 'exit' or 'quit' to exit the calculator.{Style.RESET_ALL}")
                 print()
             except EOFError:
-                print("\nGoodbye!")
+                print(f"\n{Fore.YELLOW}Goodbye!{Style.RESET_ALL}")
                 self.logger.info("REPL exited (EOF)")
                 break
             except Exception as e:
                 self.logger.log_exception(e, context="REPL main loop")
-                print(f"An unexpected error occurred: {e}")
+                print(f"{Fore.RED}An unexpected error occurred: {e}{Style.RESET_ALL}")
                 print()
 
 
