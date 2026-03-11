@@ -313,3 +313,123 @@ def test_logger_creates_directory_if_not_exists(monkeypatch, tmp_path):
     
     assert log_dir.exists()
     assert (log_dir / "calculator.log").exists()
+
+
+def test_log_config_loaded(monkeypatch, tmp_path):
+    """Test config loaded logging."""
+    log_dir = tmp_path / "logs"
+    monkeypatch.setenv("CALCULATOR_LOG_DIR", str(log_dir))
+    monkeypatch.setenv("CALCULATOR_HISTORY_DIR", str(tmp_path / "history"))
+    
+    Logger._instance = None
+    Logger._logger = None
+    
+    logger = Logger()
+    logger.log_config_loaded()
+    
+    for handler in logger._logger.handlers:
+        handler.flush()
+    
+    log_file = log_dir / "calculator.log"
+    content = log_file.read_text()
+    assert "Configuration loaded successfully" in content
+
+
+def test_log_observer_detached(monkeypatch, tmp_path):
+    """Test observer detachment logging."""
+    log_dir = tmp_path / "logs"
+    monkeypatch.setenv("CALCULATOR_LOG_DIR", str(log_dir))
+    monkeypatch.setenv("CALCULATOR_HISTORY_DIR", str(tmp_path / "history"))
+    
+    Logger._instance = None
+    Logger._logger = None
+    
+    logger = Logger()
+    logger.log_observer_detached("TestObserver")
+    
+    for handler in logger._logger.handlers:
+        handler.flush()
+    
+    log_file = log_dir / "calculator.log"
+    content = log_file.read_text()
+    assert "Observer detached: TestObserver" in content
+
+
+def test_log_validation_warning(monkeypatch, tmp_path):
+    """Test validation warning logging."""
+    log_dir = tmp_path / "logs"
+    monkeypatch.setenv("CALCULATOR_LOG_DIR", str(log_dir))
+    monkeypatch.setenv("CALCULATOR_HISTORY_DIR", str(tmp_path / "history"))
+    
+    Logger._instance = None
+    Logger._logger = None
+    
+    logger = Logger()
+    logger.log_validation_warning("Invalid input detected")
+    
+    for handler in logger._logger.handlers:
+        handler.flush()
+    
+    log_file = log_dir / "calculator.log"
+    content = log_file.read_text()
+    assert "Validation issue: Invalid input detected" in content
+
+
+def test_log_file_error(monkeypatch, tmp_path):
+    """Test file error logging."""
+    log_dir = tmp_path / "logs"
+    monkeypatch.setenv("CALCULATOR_LOG_DIR", str(log_dir))
+    monkeypatch.setenv("CALCULATOR_HISTORY_DIR", str(tmp_path / "history"))
+    
+    Logger._instance = None
+    Logger._logger = None
+    
+    logger = Logger()
+    logger.log_file_error("/some/path.csv", "Permission denied")
+    
+    for handler in logger._logger.handlers:
+        handler.flush()
+    
+    log_file = log_dir / "calculator.log"
+    content = log_file.read_text()
+    assert "File error with '/some/path.csv': Permission denied" in content
+
+
+def test_log_data_error(monkeypatch, tmp_path):
+    """Test data error logging."""
+    log_dir = tmp_path / "logs"
+    monkeypatch.setenv("CALCULATOR_LOG_DIR", str(log_dir))
+    monkeypatch.setenv("CALCULATOR_HISTORY_DIR", str(tmp_path / "history"))
+    
+    Logger._instance = None
+    Logger._logger = None
+    
+    logger = Logger()
+    logger.log_data_error("load_csv", "Missing columns")
+    
+    for handler in logger._logger.handlers:
+        handler.flush()
+    
+    log_file = log_dir / "calculator.log"
+    content = log_file.read_text()
+    assert "Data error during load_csv: Missing columns" in content
+
+
+def test_log_input_received(monkeypatch, tmp_path):
+    """Test input received logging."""
+    log_dir = tmp_path / "logs"
+    monkeypatch.setenv("CALCULATOR_LOG_DIR", str(log_dir))
+    monkeypatch.setenv("CALCULATOR_HISTORY_DIR", str(tmp_path / "history"))
+    
+    Logger._instance = None
+    Logger._logger = None
+    
+    logger = Logger()
+    logger.log_input_received(5, "+", 3)
+    
+    for handler in logger._logger.handlers:
+        handler.flush()
+    
+    log_file = log_dir / "calculator.log"
+    content = log_file.read_text()
+    assert "Input received: 5 + 3" in content

@@ -36,8 +36,10 @@ def test_integer_division_by_zero_message():
         IntegerDivision().execute(10, 0)
 
 def test_percentage_zero_denominator_message():
+    """Percentage operation should raise ZeroDivisionError with informative message for zero denominator."""
+    percentage = Percentage()
     with pytest.raises(ZeroDivisionError, match="cannot calculate percentage with zero as denominator"):
-        Percentage().execute(50, 0)
+        percentage.execute(50, 0)
 
 def test_root_zeroth_root():
     with pytest.raises(ZeroDivisionError, match="zeroth root"):

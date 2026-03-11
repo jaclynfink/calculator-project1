@@ -109,17 +109,18 @@ class IntegerDivision(Operation):
         return a // b
 
 class Percentage(Operation):
-    token = "percentage"
-    symbol = "percentage"
+    token = "percent"
+    symbol = "percent"
 
     def execute(self, a, b):
+        # Calculate what percentage a is of b: (a / b) * 100
         if b == 0:
             raise ZeroDivisionError("ERROR: cannot calculate percentage with zero as denominator")
         return (a / b) * 100
     
 class AbsoluteDifference(Operation):
     token = "absdiff"
-    symbol = "absdiff"
+    symbol = "abs_diff"
 
     def execute(self, a, b):
         return abs(a - b)
@@ -161,8 +162,11 @@ class OperationFactory:
         "intdiv": IntegerDivision,
         "//": IntegerDivision,
 
+        "percent": Percentage,
+        "pct": Percentage,
         "percentage": Percentage,
 
+        "abs_diff": AbsoluteDifference,
         "absdiff": AbsoluteDifference
     }
     

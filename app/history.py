@@ -56,7 +56,12 @@ class History:
         
         # Convert to DataFrame
         new_df = pd.DataFrame([new_row])
-        self.df = pd.concat([self.df, new_df], ignore_index=True)
+        
+        # Avoid FutureWarning by checking if df is empty first
+        if self.df.empty:
+            self.df = new_df
+        else:
+            self.df = pd.concat([self.df, new_df], ignore_index=True)
     
     def clear(self):
         """Delete all history entries."""

@@ -104,3 +104,55 @@ def test_history_load_failure_raises(tmp_path, monkeypatch):
     monkeypatch.setattr(pd, "read_csv", boom)
     with pytest.raises(DataError, match="Unexpected error"):
         History.load_csv(str(path))
+
+def test_history_save_permission_error(tmp_path, monkeypatch):
+    """Test save with permission error."""
+    h = History.empty()
+    h.add("t1", "1 + 1", 2)
+    
+    def raise_permission(*args, **kwargs):
+        raise PermissionError("Permission denied")
+    
+    monkeypatch.setattr(h.df, "to_csv", raise_permission)
+    
+    with pytest.raises(DataError, match="Permission denied"):
+        h.save_csv(str(tmp_path / "test.csv"))
+
+def test_history_save_os_error(tmp_path, monkeypatch):
+    """Test save with OS error."""
+    h = History.empty()
+    h.add("t1", "1 + 1", 2)
+    
+    def raise_os_error(*args, **kwargs):
+        raise OSError("Disk full")
+    
+    monkeypatch.setattr(h.df, "to_csv", raise_os_error)
+    
+    with pytest.raises(DataError, match="File system error"):
+        h.save_csv(str(tmp_path / "test.csv"))
+
+def test_history_load_unicode_error(tmp_path):
+    """Test load with unicode decode error."""
+    path = tmp_path / "bad_encoding.csv"
+    # Write some binary data that won't decode as UTF-8
+    path.write_bytes(b'\xff\xfe' + b'bad data')
+    
+    with pytest.raises(DataError, match="Encoding error"):
+        History.load_csv(str(path))
+
+def test_history_load_file_not_found_error(tmp_path):
+    """Test load with file not found after checking existence."""
+    import pandas as pd
+    import unittest.mock as mock
+    
+    # Mock to simulate file disappearing between existence check and read
+    def raise_file_not_found(*args, **kwargs):
+        raise FileNotFoundError("File disappeared")
+    
+    with mock.patch('pandas.read_csv', side_effect=raise_file_not_found):
+        # Create a dummy file so it passes existence check
+        path = tmp_path / "test.csv"
+        path.write_text("timestamp,expression,result\n")
+        
+        with pytest.raises(DataError, match="File not found"):
+            History.load_csv(str(path))
